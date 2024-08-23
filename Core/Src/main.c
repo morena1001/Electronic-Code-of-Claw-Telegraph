@@ -45,6 +45,7 @@ I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim6;
 
 UART_HandleTypeDef huart2;
 
@@ -59,9 +60,11 @@ static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_I2C1_Init(void);
+static void MX_TIM6_Init(void);
 /* USER CODE BEGIN PFP */
 void Telegraph_Init(void);
 void Telegraph_IO_Test(void);
+void Generate_Tone_Test(int period);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -102,6 +105,7 @@ int main(void)
   MX_TIM2_Init();
   MX_USART2_UART_Init();
   MX_I2C1_Init();
+  MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
   Telegraph_Init();
   Telegraph_IO_Test();
@@ -237,7 +241,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 30;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 2369;
+  htim1.Init.Period = 2639;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -340,6 +344,44 @@ static void MX_TIM2_Init(void)
 }
 
 /**
+  * @brief TIM6 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM6_Init(void)
+{
+
+  /* USER CODE BEGIN TIM6_Init 0 */
+
+  /* USER CODE END TIM6_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM6_Init 1 */
+
+  /* USER CODE END TIM6_Init 1 */
+  htim6.Instance = TIM6;
+  htim6.Init.Prescaler = 30;
+  htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim6.Init.Period = 2639;
+  htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM6_Init 2 */
+
+  /* USER CODE END TIM6_Init 2 */
+
+}
+
+/**
   * @brief USART2 Initialization Function
   * @param None
   * @retval None
@@ -405,8 +447,12 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 void Telegraph_Init(void) {
-	// Set up timer 1 PWM and timer 2 interrupt
+	// Set up timer 1 PWM and timer 2 and 6 interrupts
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+
+	HAL_NVIC_SetPriority(TIM6_DAC_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(TIM6_DAC_IRQn);
+
 	HAL_NVIC_SetPriority(TIM2_IRQn, 0, 0);
 	HAL_NVIC_EnableIRQ(TIM2_IRQn);
 	HAL_TIM_Base_Start_IT(&htim2);
@@ -426,25 +472,33 @@ void Telegraph_IO_Test(void) {
 //	sprintf(message, "HELLO WORLD\r\n");
 	HAL_UART_Transmit(&huart2, (uint8_t*) "\r\n", 2, 100);
 
-	__HAL_TIM_SET_AUTORELOAD(&htim1, CLICK_PERIOD * 2);
-	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, CLICK_PERIOD);
+	Generate_Tone_Test(CLICK_PERIOD);
 	HAL_Delay(500);
 
-	__HAL_TIM_SET_AUTORELOAD(&htim1, SCRATCH_PERIOD * 2);
-	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, SCRATCH_PERIOD);
+	Generate_Tone_Test(SCRATCH_PERIOD);
 	HAL_Delay(500);
 
-	__HAL_TIM_SET_AUTORELOAD(&htim1, TAP_PERIOD * 2);
-	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, TAP_PERIOD);
+	Generate_Tone_Test(TAP_PERIOD);
 	HAL_Delay(500);
 
-	__HAL_TIM_SET_AUTORELOAD(&htim1, SEND_PERIOD * 2);
-	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, SEND_PERIOD);
+	Generate_Tone_Test(TRANSMIT_PERIOD);
+	HAL_Delay(500);
+
+	Generate_Tone_Test(SPACE_PERIOD);
+	HAL_Delay(500);
+
+	Generate_Tone_Test(SEND_PERIOD);
 	HAL_Delay(500);
 
 	HD44780_Clear();
-	__HAL_TIM_SET_AUTORELOAD(&htim1, 0);
-	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
+	Generate_Tone_Test(0);
+
+	HAL_TIM_Base_Start_IT(&htim6);
+}
+
+void Generate_Tone_Test(int period) {
+	__HAL_TIM_SET_AUTORELOAD(&htim1, period * 2);
+	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, period);
 }
 /* USER CODE END 4 */
 

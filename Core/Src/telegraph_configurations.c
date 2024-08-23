@@ -39,41 +39,6 @@ char Traverse_Tree(trie_node** current_node, char character) {
 		*current_node = (*current_node)->children[child];
 		return (*current_node)->data;
 	}
-
-
-//	switch(character) {
-//	case '\\':
-//		if (!(*current_node)->children[0]) {
-//			Add_Letter((*current_node)->data);
-//			*current_node = root;
-//		} else {
-//			*current_node = (*current_node)->children[0];
-//		}
-//		break;
-//	case '|':
-//		if (!(*current_node)->children[1]) {
-//			Add_Letter((*current_node)->data);
-//			*current_node = root;
-//		} else {
-//			*current_node = (*current_node)->children[1];
-//		}
-//		break;
-//	case '/':
-//		if (!(*current_node)->children[2]) {
-//			Add_Letter((*current_node)->data);
-//			*current_node = root;
-//		} else {
-//			*current_node = (*current_node)->children[2];
-//		}
-//		break;
-//	}
-
-//	if (!*current_node) {
-//		Add_Letter((*current_node)->data);
-//		*current_node = root;
-//	}
-
-//	return (*current_node)->data;
 }
 
 

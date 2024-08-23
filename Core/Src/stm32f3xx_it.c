@@ -59,6 +59,7 @@ uint8_t col = 0;
 /* USER CODE BEGIN PFP */
 void Move_Cursor(uint8_t* row, uint8_t* col);
 void Check_Trie_Root(char letter);
+void Generate_Tone(int period, int counter);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -68,7 +69,9 @@ void Check_Trie_Root(char letter);
 
 /* External variables --------------------------------------------------------*/
 extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim6;
 /* USER CODE BEGIN EV */
+extern TIM_HandleTypeDef htim1;
 extern UART_HandleTypeDef huart2;
 extern trie_node* temporary_travel;
 /* USER CODE END EV */
@@ -227,21 +230,27 @@ void TIM2_IRQHandler(void)
 	}
 
 	if (!HAL_GPIO_ReadPin(TRB_GPIO_Port, TRB_Pin)) {
-			if (!toggle) {
-				toggle = true;
+		if (!toggle) {
+			toggle = true;
 
-				if (current_letter[0] != '\0') {
-					Add_Letter(current_letter[0]);
-					current_letter[0] = '\0';
-					end_of_letter_counter = 0;
-					temporary_travel = root;
+			if (current_letter[0] != '\0') {
+				Generate_Tone(TRANSMIT_PERIOD, TRANSMIT_COUNTER);
 
-					Move_Cursor(&row, &col);
-				}
+				Add_Letter(current_letter[0]);
+				current_letter[0] = '\0';
+				end_of_letter_counter = 0;
+				temporary_travel = root;
+
+				Move_Cursor(&row, &col);
 			}
-		} else if (!HAL_GPIO_ReadPin(SPB_GPIO_Port, SPB_Pin)) {
-			if (!toggle) {
-				toggle = true;
+		}
+	} else if (!HAL_GPIO_ReadPin(SPB_GPIO_Port, SPB_Pin)) {
+		if (!toggle) {
+			toggle = true;
+
+			if (current_letter[0] != '\0') {
+				Generate_Tone(SPACE_PERIOD, SPACE_COUNTER);
+
 				Add_Letter(current_letter[0]);
 				Add_Letter(' ');
 
@@ -252,63 +261,93 @@ void TIM2_IRQHandler(void)
 				Move_Cursor(&row, &col);
 				Move_Cursor(&row, &col);
 			}
-		} else if (!HAL_GPIO_ReadPin(SMB_GPIO_Port, SMB_Pin)) {
-			if (!toggle) {
-				toggle = true;
-
-				HAL_UART_Transmit(&huart2, (uint8_t*) input_string, input_string_length, 100);
-				current_letter[0] = '\0';
-				end_of_letter_counter = 0;
-				temporary_travel = root;
-
-				row = 0;
-				col = 0;
-				HD44780_Clear();
-			}
-		} else if (!HAL_GPIO_ReadPin(CB_GPIO_Port, CB_Pin)) {
-			if (!toggle) {
-				toggle = true;
-
-				HD44780_SetCursor(row, col);
-				current_letter[0] = Traverse_Tree(&temporary_travel, '\\');
-				HD44780_PrintStr(current_letter);
-				Check_Trie_Root('\\');
-
-				end_of_letter_counter = 251;
-			}
-		} else if (!HAL_GPIO_ReadPin(SB_GPIO_Port, SB_Pin)) {
-			if (!toggle) {
-				toggle = true;
-
-				HD44780_SetCursor(row, col);
-				current_letter[0] = Traverse_Tree(&temporary_travel, '|');
-				HD44780_PrintStr(current_letter);
-				Check_Trie_Root('|');
-
-				end_of_letter_counter = 251;
-			}
-		} else if (!HAL_GPIO_ReadPin(TB_GPIO_Port, TB_Pin)) {
-			if (!toggle) {
-				toggle = true;
-
-				HD44780_SetCursor(row, col);
-				current_letter[0] = Traverse_Tree(&temporary_travel, '/');
-				HD44780_PrintStr(current_letter);
-				Check_Trie_Root('/');
-
-				end_of_letter_counter = 251;
-			}
-		} else {
-			toggle = false;
-			if (end_of_letter_counter > 0) {
-				end_of_letter_counter--;
-			}
 		}
+	} else if (!HAL_GPIO_ReadPin(SMB_GPIO_Port, SMB_Pin)) {
+		if (!toggle) {
+			toggle = true;
+
+			Generate_Tone(SEND_PERIOD, SEND_COUNTER);
+
+			if (current_letter[0] != '\0') {
+				Add_Letter(current_letter[0]);
+				current_letter[0] = '\0';
+			}
+
+			Add_Letter('\r');
+			Add_Letter('\n');
+
+			HAL_UART_Transmit(&huart2, (uint8_t*) input_string, input_string_length, 100);
+			end_of_letter_counter = 0;
+			temporary_travel = root;
+
+			row = 0;
+			col = 0;
+			HD44780_Clear();
+		}
+	} else if (!HAL_GPIO_ReadPin(CB_GPIO_Port, CB_Pin)) {
+		if (!toggle) {
+			toggle = true;
+
+			Generate_Tone(CLICK_PERIOD, CLICK_COUNTER);
+
+			HD44780_SetCursor(row, col);
+			current_letter[0] = Traverse_Tree(&temporary_travel, '\\');
+			HD44780_PrintStr(current_letter);
+			Check_Trie_Root('\\');
+
+			end_of_letter_counter = 251;
+		}
+	} else if (!HAL_GPIO_ReadPin(SB_GPIO_Port, SB_Pin)) {
+		if (!toggle) {
+			toggle = true;
+
+			Generate_Tone(SCRATCH_PERIOD, SCRATCH_COUNTER);
+
+			HD44780_SetCursor(row, col);
+			current_letter[0] = Traverse_Tree(&temporary_travel, '|');
+			HD44780_PrintStr(current_letter);
+			Check_Trie_Root('|');
+
+			end_of_letter_counter = 251;
+		}
+	} else if (!HAL_GPIO_ReadPin(TB_GPIO_Port, TB_Pin)) {
+		if (!toggle) {
+			toggle = true;
+
+			Generate_Tone(TAP_PERIOD, TAP_COUNTER);
+
+			HD44780_SetCursor(row, col);
+			current_letter[0] = Traverse_Tree(&temporary_travel, '/');
+			HD44780_PrintStr(current_letter);
+			Check_Trie_Root('/');
+
+			end_of_letter_counter = 251;
+		}
+	} else {
+		toggle = false;
+		if (end_of_letter_counter > 0) {
+			end_of_letter_counter--;
+		}
+	}
   /* USER CODE END TIM2_IRQn 0 */
   HAL_TIM_IRQHandler(&htim2);
   /* USER CODE BEGIN TIM2_IRQn 1 */
 
   /* USER CODE END TIM2_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM6 global interrupt, DAC interrupts.
+  */
+void TIM6_DAC_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM6_DAC_IRQn 0 */
+	if (!buzzer_length_counter--)	Generate_Tone(0, 0);
+  /* USER CODE END TIM6_DAC_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim6);
+  /* USER CODE BEGIN TIM6_DAC_IRQn 1 */
+
+  /* USER CODE END TIM6_DAC_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
@@ -327,5 +366,11 @@ void Check_Trie_Root(char letter) {
 		current_letter[0] = Traverse_Tree(&temporary_travel, letter);
 		HD44780_PrintStr(current_letter);
 	}
+}
+
+void Generate_Tone(int period, int counter) {
+	__HAL_TIM_SET_AUTORELOAD(&htim1, period * 2);
+	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, period);
+	buzzer_length_counter = counter;
 }
 /* USER CODE END 1 */
