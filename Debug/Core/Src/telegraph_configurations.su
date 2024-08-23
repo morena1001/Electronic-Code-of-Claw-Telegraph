@@ -1,0 +1,6 @@
+../Core/Src/telegraph_configurations.c:15:12:Telegraph_Config_Init	8	static
+../Core/Src/telegraph_configurations.c:22:6:Add_Letter	16	static
+../Core/Src/telegraph_configurations.c:26:6:Traverse_Tree	24	static
+../Core/Src/telegraph_configurations.c:81:12:Make_Trie_Node	24	static
+../Core/Src/telegraph_configurations.c:91:6:Free_Trie_Node	24	static
+../Core/Src/telegraph_configurations.c:102:12:Trie_Init	24	static
